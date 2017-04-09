@@ -1,0 +1,28 @@
+#!/bin/sh
+devices() {
+  find /sys/block/*/ -name dev |
+  grep -Ev '\/(ram|ramzswap|loop|zram|sr)[0-9][0-9]*\/'| tr [!] [/] |
+  awk -v rlist="$REMOVABLES" '
+  BEGIN {FS="/"}
+  {
+    d = $(NF-1)
+    printf "%s",d
+    if (index(rlist,substr(d,1,3)) != 0 ) printf "\tOn a removable device."
+    printf "\n"
+  }'
+}
+
+# Main
+REMOVABLES=$(dmesg | grep "removable disk" | cut -d : -f 5- | awk '{print $1}' | tr -d "[]")
+
+[ -z "$1" ] && devices
+
+while getopts pd OPTION
+do
+  case ${OPTION} in
+    p|P) devices | grep -E '^[a-z][a-z][a-z][0-9][0-9]*|^mmcblk[0-9]p[0-9][0-9]*' ;;
+    d|D) devices | grep -Ev '^[a-z][a-z][a-z][0-9][0-9]*|^mmcblk[0-9]p[0-9][0-9]*' ;;
+    *) devices
+  esac
+done
+exit
