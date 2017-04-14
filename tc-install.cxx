@@ -21,7 +21,7 @@ static string warn="Mark active if Tiny Core is the only operation system,\nor W
 
 void selectFile() {
   brwTarget->deactivate();
-  string target = "*core,corepure64*";
+  string target = "core*.gz";
   string title = gettext("Select File for ");
   title = title + "core,corepure64";
   Fl_File_Chooser chooser("/",target.c_str(), Fl_File_Chooser::SINGLE, title.c_str());
