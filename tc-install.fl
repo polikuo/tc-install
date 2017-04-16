@@ -1,60 +1,63 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0303 
-i18n_type 1 
-i18n_include <libintl.h> 
-i18n_function mygettext 
-header_name {.h} 
+version 1.0304
+i18n_type 1
+i18n_include <libintl.h>
+i18n_function mygettext
+header_name {.h}
 code_name {.cxx}
 decl {// (c) Robert Shingledecker 2011} {private local
-} 
+}
 
 decl {// Portions (c) Brian Smith 2011} {private local
-} 
+}
+
+decl {// Refactor (c) polikuo 2017} {private local
+}
 
 decl {\#include <unistd.h>} {public global
-} 
+}
 
 decl {\#include <cstdlib>} {private local
-} 
+}
 
 decl {\#include <iostream>} {private local
-} 
+}
 
 decl {\#include <fstream>} {private local
-} 
+}
 
 decl {\#include <sstream>} {private local
-} 
+}
 
 decl {\#include <string>} {private local
-} 
+}
 
 decl {\#include <FL/Fl_File_Chooser.H>} {private local
-} 
+}
 
 decl {\#include <FL/fl_message.H>} {private local
-} 
+}
 
 decl {\#include <locale.h>} {private local
-} 
+}
 
 decl {using namespace std;} {private local
-} 
+}
 
 decl {istringstream iss;} {private local
-} 
+}
 
 decl {string command,msg,heading;} {private local
-} 
+}
 
 decl {int results, locales_set=0, test4syslinux, test4mkdosfs, test4perl;} {private local
-} 
+}
 
-decl {string image,type,installMode, target,dev,format,path,coreplus,boot,flag, markActive,tcepath;} {private local
-} 
+decl {string image, type, installMode, target, dev, format, path, coreplus, boot, flag, markActive, tcepath;} {private local
+}
 
 decl {string warn="Mark active if Tiny Core is the only operation system,\\nor Windows and Tiny Core are on the same disk.\\nOtherwise use Grub extension after installation.";} {private local
-} 
+}
 
 Function {selectFile()} {open return_type void
 } {
@@ -73,17 +76,16 @@ if ( chooser.value() == NULL )
 }
 
 path = chooser.value();
-Fl::flush();} {selected
-  }
-} 
+Fl::flush();} {}
+}
 
-Function {prepTarget()} {return_type void
+Function {prepTarget()} {open return_type void
 } {
   code {if (path.empty()) return;
 
 btnActive->deactivate();
 btnBootloader->deactivate();
-if ( installMode =="hdd" || installMode == "zip")
+if ( installMode =="hdd" || installMode == "zip" )
 {
    test4mkdosfs = system("which mkdosfs >/dev/null");
 
@@ -129,19 +131,19 @@ if (! image.empty() && flag != "x")
     unlink("/tmp/install_work");
 }
 grpButtons->deactivate();} {}
-} 
+}
 
-Function {cursor_normal()} {return_type void
+Function {cursor_normal()} {open return_type void
 } {
   code {window->cursor(FL_CURSOR_DEFAULT);
 Fl::flush();} {}
-} 
+}
 
-Function {cursor_wait()} {return_type void
+Function {cursor_wait()} {open return_type void
 } {
   code {window->cursor(FL_CURSOR_WAIT);
 Fl::flush();} {}
-} 
+}
 
 Function {mygettext(const char *msgid)} {private return_type {char *}
 } {
@@ -156,9 +158,9 @@ locales_set=1;
 }
 
 return gettext(msgid);} {}
-} 
+}
 
-Function {btnCB(Fl_Widget*, void*userdata)} {return_type {static void}
+Function {btnCB(Fl_Widget*, void*userdata)} {open return_type {static void}
 } {
   code {const string userdatastr = userdata ? (char *) userdata : "";
 
@@ -231,7 +233,7 @@ if (grpType->visible())
 
 if (grpBoot->visible())
 {
-   /*if ( installMode =="hdd" || installMode == "zip")
+   /*if ( installMode =="hdd" || installMode == "zip" )
       options->value("waitusb=5");*/
 
    brwBootRef->load("/usr/share/doc/tc/bootOptions.txt");
@@ -267,28 +269,29 @@ if (grpReview->visible())
    	if (! tcepath.empty()) {brwReview->add(("Install TCE/CDE Dircetory: "+tcepath).c_str());}
    }
 }} {}
-} 
+}
 
-Function {brwCB(Fl_Widget*, void*userdata)} {open return_type {static void}
+Function {brwCB(Fl_Widget*)} {open return_type {static void}
 } {
   code {if ( brwTarget->value() )
 {
-   dev = brwTarget->text(brwTarget->value());
-   dev = dev.substr(0,dev.find("\\t",0));
-   int partitionNbr;
-   iss.str(dev.substr(3,dev.length()));
-   iss >> partitionNbr;
-   grpButtons->activate();
-   if (btnPartition->value() == 1  && partitionNbr < 5)
-      btnActive->activate();
-   if (installMode == "frugal")
-   	btnBootloader->activate();
-   else
-   	btnBootloader->value(1);
-}} {}
-} 
+  dev = brwTarget->text(brwTarget->value());
+  dev = dev.substr(0,dev.find("\\t",0));
+  int partitionNbr;
+  iss.str(dev.substr((dev.length() - 1),dev.length()));
+  iss >> partitionNbr;
+  grpButtons->activate();
+  if (btnPartition->value() == 1  && partitionNbr < 5)
+    btnActive->activate();
+  if (installMode == "frugal")
+    btnBootloader->activate();
+  else
+    btnBootloader->value(1);
+}} {selected
+  }
+}
 
-Function {btnProceedCB(Fl_Widget*, void* userdata)} {return_type {static void}
+Function {btnProceedCB(Fl_Widget*)} {open return_type {static void}
 } {
   code {btnProceed->deactivate();
 grpButtons->deactivate();
@@ -347,14 +350,36 @@ if (pipe)
 }
 cursor_normal();
 Fl::flush();} {}
-} 
+}
 
-Function {} {open
-} {
+Function {choose_arch()} {} {
+  code {switch (fl_choice("Which architecture?", "Cancel", "64-bit", "32-bit")) {
+  case 2:
+  image = "core.gz";
+  path = "/tmp/net_source/core.gz";
+  fullpathOutput->value(path.c_str());
+  break;
+  case 1:
+  image = "corepure64.gz";
+  path = "/tmp/net_source/corepure64.gz";
+  fullpathOutput->value(path.c_str());
+  break;
+  default:
+  fullpathOutput->activate();
+  fullpathOutput->value("");
+  net_mode->value(0);
+  image.clear();
+  path.clear();
+  btnBootloader->deactivate();
+  grpButtons->deactivate();
+}} {}
+}
+
+Function {} {} {
   Fl_Window window {
     label {Tiny Core Installation}
     user_data {"quit"} open
-    xywh {34 216 480 400} type Double hide resizable
+    xywh {364 204 480 400} type Double hide resizable
   } {
     Fl_Wizard wWizard {
       label {Tiny Core Installation} open
@@ -366,7 +391,7 @@ Function {} {open
       } {
         Fl_Box lblPathCore {
           label {Path to core.gz:}
-          xywh {55 38 105 25}
+          xywh {55 40 105 25}
         }
         Fl_Output fullpathOutput {
           user_data {"core"}
@@ -384,7 +409,7 @@ prepTarget();}
             user_data {"frugal"}
             callback {installMode = (const char*)v;
 prepTarget();}
-            tooltip {Use for frugal hard drive installations} xywh {80 105 70 22} type Radio down_box DOWN_BOX value 1
+            tooltip {Use for frugal hard drive installations} xywh {80 105 100 22} type Radio down_box DOWN_BOX value 1
             code0 {installMode = "frugal";}
           }
           Fl_Check_Button {} {
@@ -392,17 +417,17 @@ prepTarget();}
             user_data {"hdd"}
             callback {installMode = (const char*)v;
 prepTarget();}
-            tooltip {Use for pendrives.   Your BIOS must support USB-HDD booting} xywh {195 105 90 22} type Radio down_box DOWN_BOX
+            tooltip {Use for pendrives.   Your BIOS must support USB-HDD booting} xywh {195 105 100 22} type Radio down_box DOWN_BOX
           }
           Fl_Check_Button {} {
             label {USB-ZIP}
             user_data {"zip"}
             callback {installMode = (const char*)v;
 prepTarget();}
-            tooltip {Use for pendrives.   Drive will be formatted into two FAT partitions} xywh {315 105 80 22} type Radio down_box DOWN_BOX
+            tooltip {Use for pendrives.   Drive will be formatted into two FAT partitions} xywh {315 105 100 22} type Radio down_box DOWN_BOX
           }
         }
-        Fl_Group {} {
+        Fl_Group {} {open
           xywh {55 131 375 33} box ENGRAVED_FRAME
         } {
           Fl_Check_Button btnWhole {
@@ -413,7 +438,7 @@ prepTarget();}
     type = (const char*)v;
     prepTarget();
 }}
-            xywh {80 136 125 25} type Radio down_box DOWN_BOX
+            xywh {80 136 130 25} type Radio down_box DOWN_BOX
           }
           Fl_Check_Button btnPartition {
             label {Existing Partition}
@@ -423,7 +448,7 @@ prepTarget();}
 type = (const char*)v;
 prepTarget();
 }}
-            xywh {265 136 130 25} type Radio down_box DOWN_BOX
+            xywh {255 136 130 25} type Radio down_box DOWN_BOX
             code0 {//type = "partition";}
           }
         }
@@ -445,12 +470,30 @@ prepTarget();
           xywh {130 318 230 24} down_box DOWN_BOX deactivate
           code0 {btnBootloader->value(1);}
         }
+        Fl_Check_Button net_mode {
+          label {Download From Internet}
+          callback {if (net_mode->value() == 1) {
+  fullpathOutput->deactivate();
+  choose_arch();
+  prepTarget();
+} else {
+  brwTarget->deactivate();
+  fullpathOutput->activate();
+  fullpathOutput->value("");
+  image.clear();
+  path.clear();
+  btnActive->deactivate();
+  btnBootloader->deactivate();
+  grpButtons->deactivate();
+}}
+          xywh {255 40 175 22} down_box DOWN_BOX
+        }
       }
-      Fl_Group grpFormat {open
+      Fl_Group grpFormat {
         xywh {25 30 435 325} hide
       } {
         Fl_Group FormatType {
-          label {Formatting Options}
+          label {Formatting Options} open
           xywh {100 95 270 230}
         } {
           Fl_Round_Button btnNoFormat {
@@ -487,7 +530,7 @@ prepTarget();
         }
       }
       Fl_Group grpBoot {
-        label {Boot Options}
+        label {Boot Options} open
         xywh {25 30 435 325} hide
       } {
         Fl_Browser brwBootRef {
@@ -500,11 +543,11 @@ These can be edited later on via your bootloader config.}
           xywh {35 325 415 20} labeltype EMBOSSED_LABEL align 1
         }
       }
-      Fl_Group grpExtensionsCorePlus {
+      Fl_Group grpExtensionsCorePlus {open
         xywh {50 55 370 285} hide
       } {
         Fl_Group installType {
-          label {Install Type}
+          label {Install Type} open
           xywh {85 70 310 75}
         } {
           Fl_Round_Button installCoreX11 {
@@ -518,7 +561,7 @@ These can be edited later on via your bootloader config.}
           }
         }
         Fl_Group corePlusExtensions {
-          label {Core Plus Extensions Catagories to Install}
+          label {Core Plus Extensions Catagories to Install} open
           xywh {83 155 315 180}
         } {
           Fl_Box {} {
@@ -555,11 +598,11 @@ These can be edited later on via your bootloader config.}
           }
         }
       }
-      Fl_Group grpExtensionsStandAlone {
+      Fl_Group grpExtensionsStandAlone {open
         xywh {36 61 405 255} hide
       } {
         Fl_Group {} {
-          label {Extension Installation}
+          label {Extension Installation} open
           xywh {52 111 389 205}
         } {
           Fl_Round_Button btnInstallExtensions {
@@ -597,7 +640,7 @@ outputTCEDir->value(tcepath.c_str());}
           }
         }
       }
-      Fl_Group grpReview {
+      Fl_Group grpReview {open
         xywh {25 30 435 325} hide
       } {
         Fl_Browser brwReview {
@@ -628,17 +671,15 @@ outputTCEDir->value(tcepath.c_str());}
       }
     }
   }
-  code {/*
-test4syslinux = system("which syslinux >/dev/null");
+  code {test4syslinux = system("which syslinux >/dev/null");
 if ( test4syslinux != 0 )
 {
    fl_message("tc-install requires syslinux extension to be loaded.\\nHDD (vfat) & ZIP installs require dosfstools.\\nZIP will also require perl.");
    exit(1);
 }
-*/
+
 
 int cd_num;
-int results;
 char command_buff[36];
 char path_buff[29];
 char tce_path_buff[13];
@@ -676,4 +717,4 @@ if (cd_num != 10) {
 
 brwTarget->deactivate();
 prepTarget();} {}
-} 
+}

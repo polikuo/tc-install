@@ -9,11 +9,13 @@ useBusybox
 use32(){
   VMLINUZ="vmlinuz"
   ROOTFS="core"
+  BUILD="x86"
 }
 
 use64(){
   VMLINUZ="vmlinuz64"
   ROOTFS="corepure64"
+  BUILD="x86_64"
 }
 
 install_ext(){
@@ -707,18 +709,18 @@ net_setup(){
   mkdir -p /tmp/net_source
   cd /tmp/net_source
   BOOT="/tmp/net_source"
-  echo -n "Enter architecture (32)bit, (64)bit or (q)uit: "
-  read ARCH
-  if [ "$ARCH" = "32" ]; then
-    use32
-    BUILD=x86
-  else
-    if [ "$ARCH" = "64" ]; then
-      use64
-      BUILD=x86_64
+  if [ "$INTERACTIVE" ]; then
+    echo -n "Enter architecture (32)bit, (64)bit or (q)uit: "
+    read ARCH
+    if [ "$ARCH" = "32" ]; then
+      use32
     else
-      echo "Invalid Arch type."
-      abort
+      if [ "$ARCH" = "64" ]; then
+        use64
+      else
+        echo "Invalid Arch type."
+        abort
+      fi
     fi
   fi
   echo Downloading "$ROOTFS".gz
@@ -759,6 +761,7 @@ i=0
         [ "$(uname -m)" = "i686" ] && use32 || use64
       }
     fi
+    echo "$SOURCE" | grep -q "/tmp/net_source/" && net_setup
     ;;
     2) TYPE="$1"
     ;;
