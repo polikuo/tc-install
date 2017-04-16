@@ -700,10 +700,16 @@ getOPTIONS(){
 }
 
 net_setup(){
-  clear
+  [ "$INTERACTIVE" ] && clear
   LATEST=`wget -t 3 -c -q -O - $(cat /opt/tcemirror)latest-$(getBuild) 2>/dev/null`
-  [ -n "$LATEST" ] && echo ${CYAN}The latest version is "$LATEST"${NORMAL} || {
-    echo ${RED}Error, can not connect to internet.${NORMAL} >&2
+  [ -n "$LATEST" ] && {
+    [ "$INTERACTIVE" ] && echo -n ${CYAN}
+    echo The latest version is "$LATEST"
+    [ "$INTERACTIVE" ] && echo -n ${NORMAL}
+  } || {
+    [ "$INTERACTIVE" ] && echo -n ${RED}
+    echo Error, can not connect to internet.
+    [ "$INTERACTIVE" ] && echo -n ${NORMAL}
     abort
   }
   mkdir -p /tmp/net_source
@@ -761,7 +767,10 @@ i=0
         [ "$(uname -m)" = "i686" ] && use32 || use64
       }
     fi
-    echo "$SOURCE" | grep -q "/tmp/net_source/" && net_setup
+    echo "$SOURCE" | grep -q "/tmp/net_source/" && {
+      echo "$SOURCE" | grep -q "corepure64" && use64 || use32
+      net_setup
+    }
     ;;
     2) TYPE="$1"
     ;;
