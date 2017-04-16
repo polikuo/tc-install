@@ -702,16 +702,16 @@ getOPTIONS(){
 net_setup(){
   [ "$INTERACTIVE" ] && clear
   LATEST=`wget -t 3 -c -q -O - $(cat /opt/tcemirror)latest-$(getBuild) 2>/dev/null`
-  [ -n "$LATEST" ] && {
+  if [ -n "$LATEST" ]; then
     [ "$INTERACTIVE" ] && echo -n ${CYAN}
     echo The latest version is "$LATEST"
     [ "$INTERACTIVE" ] && echo -n ${NORMAL}
-  } || {
+  else
     [ "$INTERACTIVE" ] && echo -n ${RED}
     echo Error, can not connect to internet.
     [ "$INTERACTIVE" ] && echo -n ${NORMAL}
     abort
-  }
+  fi
   mkdir -p /tmp/net_source
   cd /tmp/net_source
   BOOT="/tmp/net_source"
