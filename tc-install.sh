@@ -733,14 +733,22 @@ net_setup(){
   wget -t 3 -c $(cat /opt/tcemirror)${LATEST%%.*}.x/$BUILD/release/distribution_files/"$ROOTFS".gz
   wget -t 3 -c -q $(cat /opt/tcemirror)${LATEST%%.*}.x/$BUILD/release/distribution_files/"$ROOTFS".gz.md5.txt
   [ -n "$(cat "$ROOTFS".gz.md5.txt)" ] && [ "$(md5sum "$ROOTFS".gz)" = "$(cat "$ROOTFS".gz.md5.txt)" ] || {
-    echo ${RED}Error, md5 checksum does not match${NORMAL} >&2
+    [ "$INTERACTIVE" ] && echo -n ${RED}
+    echo Error, md5 checksum does not match.
+    echo Please select a faster mirror with appbrowser,
+    echo or modify /opt/tcemirror manually.
+    [ "$INTERACTIVE" ] && echo -n ${NORMAL}
     abort
   }
   echo Downloading "$VMLINUZ"
   wget -t 3 -c $(cat /opt/tcemirror)${LATEST%%.*}.x/$BUILD/release/distribution_files/"$VMLINUZ"
   wget -t 3 -c -q $(cat /opt/tcemirror)${LATEST%%.*}.x/$BUILD/release/distribution_files/"$VMLINUZ".md5.txt
   [ -n "$(cat "$VMLINUZ".md5.txt)" ] && [ "$(md5sum "$VMLINUZ")" = "$(cat "$VMLINUZ".md5.txt)" ] || {
-    echo ${RED}Error, md5 checksum does not match${NORMAL} >&2
+    [ "$INTERACTIVE" ] && echo -n ${RED}
+    echo Error, md5 checksum does not match.
+    echo Please select a faster mirror with appbrowser,
+    echo or modify /opt/tcemirror manually.
+    [ "$INTERACTIVE" ] && echo -n ${NORMAL}
     abort
   }
 }
