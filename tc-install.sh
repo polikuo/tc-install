@@ -423,7 +423,7 @@ getROOTFS(){
       [ -f "$BOOT"/core.gz ] && ROOTFS="core" || MISSING="$MISSING"core.gz
     else
       [ -f "$BOOT"/vmlinuz64 ] && VMLINUZ="vmlinuz64" || MISSING="vmlinuz64 "
-      [ -f "$BOOT"/core.gz ] && ROOTFS="corepure64" || MISSING="$MISSING"corepure64.gz
+      [ -f "$BOOT"/corepure64.gz ] && ROOTFS="corepure64" || MISSING="$MISSING"corepure64.gz
     fi
 
     if [ -n "$MISSING" ]; then
