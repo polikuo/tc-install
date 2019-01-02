@@ -10,12 +10,14 @@ use32(){
   VMLINUZ="vmlinuz"
   ROOTFS="core"
   BUILD="x86"
+  TCE="tce32"
 }
 
 use64(){
   VMLINUZ="vmlinuz64"
   ROOTFS="corepure64"
   BUILD="x86_64"
+  TCE="tce64"
 }
 
 install_ext(){
@@ -23,29 +25,29 @@ install_ext(){
   source=$2
   onboot=$3
 
-  dest=/mnt/drive/tce/optional
+  dest="/mnt/drive/${TCE}"
 
   [ -d $dest ] || mkdir -p $dest
 
-  cp -a "$source/$app" "$dest" 2>/dev/null
-  cp -a "$source/$app.dep" "$dest" 2>/dev/null
-  cp -a "$source/$app.md5.txt" "$dest" 2>/dev/null
-  cp -a "$source/$app.zsync; sleep 1" "$dest" 2>/dev/null
-  cp -a "$source/$app.tree" "$dest" 2>/dev/null
+  cp -a "$source/$app" "${dest}/optional" 2>/dev/null
+  cp -a "$source/$app.dep" "${dest}/optional" 2>/dev/null
+  cp -a "$source/$app.md5.txt" "${dest}/optional" 2>/dev/null
+  cp -a "$source/$app.zsync" "${dest}/optional" 2>/dev/null
+  cp -a "$source/$app.tree" "${dest}/optional" 2>/dev/null
 
   if [ "$onboot" = "yes" ]; then
-    echo "$app" >> /mnt/drive/tce/onboot.lst
+    echo "$app" >> "${dest}/onboot.lst"
   fi
 
   if [ -f $source/$app.dep ]; then
-    for depapp in `cat $source/$app.dep`; do
+    for depapp in $(cat $source/$app.dep); do
       install_ext $depapp $source no
     done
   fi
 }
 
 copy_tce(){
-
+  dest="/mnt/drive/${TCE}"
   if [ "$COREPLUS" = "yes" ]; then
     if [ "$COREPLUSINSTALLTYPE" = "X" ]; then
       for EXTENSION in $(echo "$XBASE") $DESKTOP.tcz; do
@@ -62,21 +64,21 @@ copy_tce(){
     done
   else
     if [ -d "$STANDALONEEXTENSIONS" ]; then
-      mkdir -p /mnt/drive/tce/optional
-      cp -r "$STANDALONEEXTENSIONS/optional" /mnt/drive/tce
+      mkdir -p "${dest}/optional"
+      cp -r "$STANDALONEEXTENSIONS/optional" $dest
       if [ -e "$STANDALONEEXTENSIONS/onboot.lst" ]; then
-        cp "$STANDALONEEXTENSIONS/onboot.lst" /mnt/drive/tce
+        cp "$STANDALONEEXTENSIONS/onboot.lst" $dest
       fi
     else
       # Last resort an iso was specified so copy the cde into tce
-      [ -d /mnt/staging/cde ] && cp -a /mnt/staging/cde/* /mnt/drive/tce/.
+      [ -d /mnt/staging/cde ] && cp -a /mnt/staging/cde/* $dest
       sync; sleep 1
     fi
   fi
 
 
-  chown -R tc.staff /mnt/drive/tce 2>/dev/null
-  chmod -R u+w /mnt/drive/tce 2>/dev/null
+  chown -R tc.staff $dest 2>/dev/null
+  chmod -R u+w $dest 2>/dev/null
 
 }
 
@@ -220,33 +222,37 @@ syslinux_setup(){
     abort
   fi
   [ "$BOOTLOADER" == "yes" ] && [ -d $BOOTDIR ] || mkdir -p $BOOTDIR
-  [ -d /mnt/drive/tce ] || mkdir -p /mnt/drive/tce/optional
+  dest="/mnt/drive/${TCE}"
+  [ -d $dest ] || mkdir -p "$dest/optional"
 
   cp  $BOOT/$VMLINUZ $BOOTDIR
-  cp  $BOOT/"$ROOTFS".gz $BOOTDIR
+  cp  "${BOOT}/${ROOTFS}.gz" $BOOTDIR
 
   copy_tce
 
   if [ "$BOOTLOADER" == "yes" ]; then
-    echo "DEFAULT $ROOTFS" > /mnt/drive/syslinux.cfg
-    echo "LABEL $ROOTFS" >> /mnt/drive/syslinux.cfg
-    echo "KERNEL $BOOTPATH/$VMLINUZ" >> /mnt/drive/syslinux.cfg
-    echo "APPEND initrd=$BOOTPATH/$ROOTFS.gz quiet waitusb=5:"$TARGETUUID" tce="$TARGETUUID" " >> /mnt/drive/syslinux.cfg
+    echo "DEFAULT ${ROOTFS}" > /mnt/drive/syslinux.cfg
+    echo "LABEL ${ROOTFS}" >> /mnt/drive/syslinux.cfg
+    echo "KERNEL ${BOOTPATH}/${VMLINUZ}" >> /mnt/drive/syslinux.cfg
+    echo "INITRD ${BOOTPATH}/${ROOTFS}.gz" >> /mnt/drive/syslinux.cfg
+    printf "APPEND quiet " >> /mnt/drive/syslinux.cfg
+    [ -n "$OPTIONS" ] && printf "%s " "$OPTIONS" >> /mnt/drive/syslinux.cfg
+    echo "waitusb=5:${TARGETUUID} tce=${TARGETUUID}/${TCE}" >> /mnt/drive/syslinux.cfg
     sync
-    sed -i s"~quiet ~quiet $OPTIONS ~" /mnt/drive/syslinux.cfg
   fi
 
   sync
-  [ -f /mnt/drive/tce/${MYDATA}.tgz ] || touch /mnt/drive/tce/${MYDATA}.tgz
+  [ -f ${dest}/${MYDATA}.tgz ] || touch ${dest}/${MYDATA}.tgz
   [ "$BOOTLOADER" == "yes" ] && echo "Applying syslinux."
-  [ "$BOOTLOADER" == "yes" ] && syslinux --install /dev/$TARGET > /dev/null 2>&1
+  [ "$BOOTLOADER" == "yes" ] && syslinux --install "/dev/${TARGET}" > /dev/null 2>&1
   sync
   umount /mnt/drive
 }
 
 zip_update(){
-  DATA="$DEVICE"2
-  DATAUUID=`blkid -s UUID /dev/"$DATA"|cut -f2 -d\ `
+  DATA="${DEVICE}2"
+  DATAUUID=$(blkid -s UUID "/dev/${DATA}" | awk '{print $2}')
+  dest="/mnt/drive/${TCE}"
   echo "Setting up boot image on /mnt/$TARGET"
   mount -t vfat /dev/"$TARGET" /mnt/drive
   if [ $? != 0 ]; then
@@ -255,15 +261,15 @@ zip_update(){
   fi
   echo "Setting up $ROOTFS image on /mnt/$TARGET"
   cp  $BOOT/$VMLINUZ /mnt/drive/
-  cp  $BOOT/"$ROOTFS".gz /mnt/drive
+  cp  "$BOOT/${ROOTFS}.gz" /mnt/drive
   sync; sleep 1
   echo "DEFAULT $ROOTFS" > /mnt/drive/syslinux.cfg
   echo "LABEL $ROOTFS" >> /mnt/drive/syslinux.cfg
   echo "KERNEL $VMLINUZ" >> /mnt/drive/syslinux.cfg
-  echo "INITRD $ROOTFS.gz" >> /mnt/drive/syslinux.cfg
-  echo "APPEND quiet waitusb=5:"$DATAUUID" tce="$DATAUUID" " >> /mnt/drive/syslinux.cfg
-  sync; sleep 1
-  sed -i s"~quiet ~quiet $OPTIONS ~" /mnt/drive/syslinux.cfg
+  echo "INITRD ${ROOTFS}.gz" >> /mnt/drive/syslinux.cfg
+  printf "APPEND quiet " >> /mnt/drive/syslinux.cfg
+  [ -n "$OPTIONS" ] && printf "%s " "$OPTIONS" >> /mnt/drive/syslinux.cfg
+  echo "waitusb=5:${TARGETUUID} tce=${TARGETUUID}/${TCE}" >> /mnt/drive/syslinux.cfg
   sync; sleep 1
   umount /mnt/drive
   mount -t vfat /dev/$DATA /mnt/drive
@@ -271,30 +277,30 @@ zip_update(){
     echo "Error mounting usb device partition 2"
     abort
   fi
-  [ -d /mnt/drive/tce ] || mkdir /mnt/drive/tce
-  [ -f /mnt/drive/tce/${MYDATA}.tgz ] || touch /mnt/drive/tce/${MYDATA}.tgz
+  [ -d $dest ] || mkdir $dest
+  [ -f "${dest}/${MYDATA}.tgz" ] || touch "${dest}/${MYDATA}.tgz"
   copy_tce
   umount /mnt/drive
 }
 
 extlinux_setup(){
   sync; sleep 1
-  mount /dev/"$TARGET" /mnt/drive
+  mount "/dev/${TARGET}" /mnt/drive
   if [ $? != 0 ]; then
     echo "Error mounting usb device"
     abort
   fi
-
+  dest="/mnt/drive/${TCE}"
   [ "$BOOTLOADER" == "yes" ] && echo "Applying extlinux."
   [ "$BOOTLOADER" == "yes" ] && [ -d $BOOTDIR/extlinux ] || mkdir -p $BOOTDIR/extlinux
   [ "$BOOTLOADER" == "yes" ] && extlinux -i $BOOTDIR/extlinux
   sync; sleep 1
 
   echo "Setting up $ROOTFS image on /mnt/$TARGET"
-  [ -d /mnt/drive/tce ] || mkdir /mnt/drive/tce
+  [ -d $dest ] || mkdir $dest
 
   cp  $BOOT/$VMLINUZ $BOOTDIR
-  cp  $BOOT/"$ROOTFS".gz $BOOTDIR
+  cp  "${BOOT}/${ROOTFS}.gz" $BOOTDIR
 
   copy_tce
 
@@ -325,7 +331,7 @@ extlinux_setup(){
       '
     )"
 
-    > $BOOTDIR/extlinux/extlinux.conf
+    :> "${BOOTDIR}/extlinux/extlinux.conf"
 
     if [ -n "$LOCALOS" ]; then
       if [ "$TYPE" == "frugal" ] && [ "$MARKACTIVE" == "1" ]; then
@@ -343,9 +349,11 @@ extlinux_setup(){
 
     echo "DEFAULT $ROOTFS" >> $BOOTDIR/extlinux/extlinux.conf
     echo "LABEL $ROOTFS" >> $BOOTDIR/extlinux/extlinux.conf
-    echo "KERNEL $BOOTPATH/$VMLINUZ" >> $BOOTDIR/extlinux/extlinux.conf
-    echo "INITRD $BOOTPATH/$ROOTFS.gz" >> $BOOTDIR/extlinux/extlinux.conf
-    echo "APPEND quiet waitusb=5:"$TARGETUUID" tce="$TARGETUUID" " >> $BOOTDIR/extlinux/extlinux.conf
+    echo "KERNEL ${BOOTPATH}/${VMLINUZ}" >> $BOOTDIR/extlinux/extlinux.conf
+    echo "INITRD ${BOOTPATH}/${ROOTFS}.gz" >> $BOOTDIR/extlinux/extlinux.conf
+    printf "APPEND quiet " >> $BOOTDIR/extlinux/extlinux.conf
+    [ -n "$OPTIONS" ] && printf "%s " $OPTIONS >> $BOOTDIR/extlinux/extlinux.conf
+    echo "waitusb=5:${TARGETUUID} tce=${TARGETUUID}/${TCE}" >> $BOOTDIR/extlinux/extlinux.conf
 
     if [ -n "$LOCALOS" ]; then
       if [ "$TYPE" == "frugal" ] && [ "$MARKACTIVE" == "1" ]; then
@@ -365,15 +373,19 @@ extlinux_setup(){
           mount $(echo $LOCALOS | cut -d ' ' -f 1) /mnt/linux
           DISTRO="$(cat /mnt/linux/etc/*-release 2> /dev/null)"
           echo "LABEL linux" >> $BOOTDIR/extlinux/extlinux.conf
-          [ -n "$DISTRO" ] && {
-            echo "$DISTRO" | grep -q PRETTY_NAME && NAME=$(echo "$DISTRO" | grep PRETTY_NAME | cut -d '=' -f 2) || {
-              echo "$DISTRO" | grep -q "^NAME" && NAME=$(echo "$DISTRO" | grep "^NAME" | cut -d '=' -f 2) || {
-                [ `echo "$DISTRO" | sort -u | wc -l` = 1 ] && NAME=$(echo "$DISTRO" | sort -u) || NAME="Unknown Linux"
-              }
-            }
-          } || {
+          if [ -n "$DISTRO" ]; then
+            if $(echo "$DISTRO" | grep -q PRETTY_NAME); then
+              NAME=$(echo "$DISTRO" | grep PRETTY_NAME | cut -d '=' -f 2)
+            else
+              if $(echo "$DISTRO" | grep -q "^NAME"); then
+                NAME=$(echo "$DISTRO" | grep "^NAME" | cut -d '=' -f 2)
+              else
+                [ $(echo "$DISTRO" | sort -u | wc -l) = 1 ] && NAME=$(echo "$DISTRO" | sort -u) || NAME="Unknown Linux"
+              fi
+            fi
+          else
             NAME="Unknown Linux"
-          }
+          fi
           echo "MENU LABEL $NAME" >> $BOOTDIR/extlinux/extlinux.conf
           umount /mnt/linux
         fi
@@ -385,12 +397,10 @@ extlinux_setup(){
         echo "APPEND boot ${LC_PART}" >> $BOOTDIR/extlinux/extlinux.conf
       fi
     fi
-
     sync; sleep 1
-    sed -i s"~quiet ~quiet $OPTIONS ~" $BOOTDIR/extlinux/extlinux.conf
   fi
 
-  [ -f /mnt/drive/tce/${MYDATA}.tgz ] || touch /mnt/drive/tce/${MYDATA}.tgz
+  [ -f "${dest}/${MYDATA}.tgz" ] || touch "${dest}/${MYDATA}.tgz"
   sync; sleep 1
   umount /mnt/drive
 }
@@ -769,9 +779,9 @@ i=0
       iso_prep
     else
       BOOT="${SOURCE%/*}"
-      [ -r "$BOOT"/vmlinuz ] && use32
-      [ -r "$BOOT"/vmlinuz64 ] && use64
-      [ -r "$BOOT"/vmlinuz ] && [ -r "$BOOT"/vmlinuz64 ] && {
+      [ -r "${BOOT}/vmlinuz" ] && use32
+      [ -r "${BOOT}/vmlinuz64" ] && use64
+      [ -r "${BOOT}/vmlinuz" ] && [ -r "${BOOT}/vmlinuz64" ] && {
         [ "$(uname -m)" = "i686" ] && use32 || use64
       }
     fi
@@ -784,10 +794,10 @@ i=0
     ;;
     3) TARGET="$1"
     DEVICE="$(echo $1 | grep -Eo '^[[:lower:]]*|^mmcblk[0-9]*')"
-    echo "$TARGET" | sed "s/$DEVICE//g" | grep -q "[0-9]" && TITLE="partition"
+    echo "$TARGET" | sed "s/${DEVICE}//g" | grep -q "[0-9]" && TITLE="partition"
     [ "$TYPE" == "frugal" ] || {
-      TARGET="$DEVICE"1
-      [ "$(echo $DEVICE | grep -o '[[:alpha:]]*')" = "mmcblk" ] && TARGET="$DEVICE"p1
+      TARGET="${DEVICE}1"
+      [ "$(echo $DEVICE | grep -o '[[:alpha:]]*')" = "mmcblk" ] && TARGET="${DEVICE}p1"
     }
     ;;
     4) MARKACTIVE="$1"
@@ -864,7 +874,7 @@ if [ "$INTERACTIVE" ]; then
   clear
 fi
 
-grep -q ^/dev/"$DEVICE" /etc/mtab
+grep -q "^/dev/${DEVICE}" /etc/mtab
 if [ "$?" == 0  ]; then
   echo "$DEVICE appears to have a partition already mounted!"
   echo "Check if correct device, if so,  umount it and then"
@@ -879,9 +889,9 @@ if [ "$COREPLUS" = "yes" -a "$COREPLUSINSTALLTYPE" = "X" ]; then
 fi
 
 BOOTDIR="/mnt/drive/boot"
-[ "$TYPE" == "frugal" ] && BOOTDIR="/mnt/drive/tce/boot"
+[ "$TYPE" == "frugal" ] && BOOTDIR="/mnt/drive/${TCE}/boot"
 BOOTPATH="/boot"
-[ "$TYPE" == "frugal" ] && BOOTPATH="/tce/boot"
+[ "$TYPE" == "frugal" ] && BOOTPATH="/${TCE}/boot"
 
 case "$TYPE" in
   "hdd") hdd_setup ;;
@@ -891,7 +901,7 @@ esac
 
 rebuildfstab
 [ -d /mnt/drive ] || mkdir /mnt/drive
-TARGETUUID="$(blkid -s UUID /dev/${TARGET} | awk '{print $2}')"
+TARGETUUID=$(blkid -s UUID /dev/${TARGET} | awk '{print $2}')
 echo "$TARGETUUID"
 if [ "$TYPE" == "zip" ]; then
   zip_update
