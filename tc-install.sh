@@ -27,14 +27,12 @@ install_ext(){
 
   dest="/mnt/drive/${TCE}"
 
-  [ -d $dest ] || mkdir -p $dest
-
+  [ -d "${dest}/optional" ] || mkdir -p "${dest}/optional"
   cp -a "$source/$app" "${dest}/optional" 2>/dev/null
   cp -a "$source/$app.dep" "${dest}/optional" 2>/dev/null
   cp -a "$source/$app.md5.txt" "${dest}/optional" 2>/dev/null
   cp -a "$source/$app.zsync" "${dest}/optional" 2>/dev/null
   cp -a "$source/$app.tree" "${dest}/optional" 2>/dev/null
-
   if [ "$onboot" = "yes" ]; then
     echo "$app" >> "${dest}/onboot.lst"
   fi
@@ -125,7 +123,7 @@ iso_prep(){
     abort
   fi
   IMAGE="/mnt/staging"
-  BOOT="/mnt/staging/boot/"
+  BOOT="/mnt/staging/boot"
   [ -f "$BOOT"/vmlinuz ] && use32
   [ -f "$BOOT"/vmlinuz64 ] && use64
   [ -f "$BOOT"/vmlinuz ] && [ -f "$BOOT"/vmlinuz64 ] && {
@@ -142,7 +140,7 @@ hdd_setup(){
   if [ "$FORMAT" == "vfat" ]; then
     mkdosfs /dev/"$TARGET"
   else
-    mkfs."$FORMAT" -O \^64bit -F -m 0 /dev/"$TARGET" > /dev/null || abort
+    "mkfs.${FORMAT}" -O '^64bit' -F -m 0 "/dev/${TARGET}" > /dev/null || abort
   fi
   sync; sleep 1
 
@@ -201,10 +199,10 @@ frugal_setup(){
     echo Formatting /dev/"$TARGET"
     p="$(echo "$TARGET" | grep -o [[:digit:]]*$)"
     if [ "$FORMAT" == "vfat" ]; then
-      mkfs.vfat /dev/"$TARGET" > /dev/null || abort
+      mkfs.vfat "/dev/${TARGET}" > /dev/null || abort
       [ "$TITLE" = "partition" ] && echo -e "t\n$p\nc\nw" | fdisk /dev/$DEVICE > /dev/null 2>&1
     else
-      mkfs."$FORMAT" -O \^64bit -F -m 0 /dev/"$TARGET" > /dev/null || abort
+      "mkfs.${FORMAT}" -O '^64bit' -F -m 0 "/dev/${TARGET}" > /dev/null || abort
       [ "$TITLE" = "partition" ] && echo -e "t\n$p\n83\nw" | fdisk /dev/$DEVICE > /dev/null 2>&1
     fi
     sync; sleep 1
@@ -223,7 +221,7 @@ syslinux_setup(){
   fi
   [ "$BOOTLOADER" == "yes" ] && [ -d $BOOTDIR ] || mkdir -p $BOOTDIR
   dest="/mnt/drive/${TCE}"
-  [ -d $dest ] || mkdir -p "$dest/optional"
+  [ -d $dest ] || mkdir -p "${dest}/optional"
 
   cp  $BOOT/$VMLINUZ $BOOTDIR
   cp  "${BOOT}/${ROOTFS}.gz" $BOOTDIR
@@ -305,16 +303,16 @@ extlinux_setup(){
   copy_tce
 
   if [ "$BOOTLOADER" == "yes" ]; then
-
+    FDISK=$(fdisk -l 2> /dev/null)
     # check for a Windows / Linux partition and if found make a boot menu.
-    column="$(fdisk -l 2> /dev/null | grep -i Id | head -n 1 | awk '
+    column=$(echo "$FDISK" | grep -i Id | head -n 1 | awk '
       BEGIN {IGNORECASE=1} {
         for (i = 1; i <= NF; ++i) {
           if ($i == "Id") {print i}
         }
       }'
-    )"
-    LOCALOS="$(fdisk -l 2> /dev/null | awk -v c="$column" -v d="$DEVICE" '
+    )
+    LOCALOS=$(echo "$FDISK" | awk -v c="$column" -v d="$DEVICE" '
         (/\*/) && ($1 ~ d) {
           type = $c
           results = $1
@@ -329,7 +327,7 @@ extlinux_setup(){
           }
         }
       '
-    )"
+    )
 
     :> "${BOOTDIR}/extlinux/extlinux.conf"
 
@@ -429,15 +427,15 @@ getROOTFS(){
     fi
 
     if [ "$(uname -m)" = "i686" ]; then
-      [ -f "$BOOT"/vmlinuz ] && VMLINUZ="vmlinuz" || MISSING="vmlinuz "
-      [ -f "$BOOT"/core.gz ] && ROOTFS="core" || MISSING="$MISSING"core.gz
+      [ -f "${BOOT}/vmlinuz" ] && VMLINUZ="vmlinuz" || MISSING="vmlinuz "
+      [ -f "${BOOT}/core.gz" ] && ROOTFS="core" || MISSING="${MISSING}core.gz"
     else
-      [ -f "$BOOT"/vmlinuz64 ] && VMLINUZ="vmlinuz64" || MISSING="vmlinuz64 "
-      [ -f "$BOOT"/corepure64.gz ] && ROOTFS="corepure64" || MISSING="$MISSING"corepure64.gz
+      [ -f "${BOOT}/vmlinuz64" ] && VMLINUZ="vmlinuz64" || MISSING="vmlinuz64 "
+      [ -f "${BOOT}/corepure64.gz" ] && ROOTFS="corepure64" || MISSING="${MISSING}corepure64.gz"
     fi
 
     if [ -n "$MISSING" ]; then
-      echo "Could not find system file(s): $MISSING"
+      echo "Could not find system file(s):" $MISSING
       abort
     fi
     echo "Using: ${GREEN}$BOOT/$ROOTFS.gz${NORMAL}"
@@ -448,8 +446,8 @@ getROOTFS(){
     count=0
     CDROMS=`cat /etc/sysconfig/cdroms 2>/dev/null | grep -o sr[[:digit:]]`
     for CD in $CDROMS; do
-      [ -d /mnt/"$CD" ] && mount /mnt/"$CD" 2>/dev/null
-      total=`expr $total + 1`
+      [ -d "/mnt/${CD}" ] && mount "/mnt/${CD}" 2>/dev/null
+      total=$(expr $total + 1)
       KERNEL_FOUND=false
       ROOTFS_FOUND=false
       if [ -d /mnt/"$CD"/boot ]; then
@@ -457,8 +455,8 @@ getROOTFS(){
         [ -r /mnt/"$CD"/boot/core.gz ] && ROOTFS_FOUND=true
         [ -r /mnt/"$CD"/boot/vmlinuz64 ] && KERNEL_FOUND=true
         [ -r /mnt/"$CD"/boot/corepure64.gz ] && ROOTFS_FOUND=true
-        ( $KERNEL_FOUND ) || MISSING="$MISSING""$(echo '')""missing vmlinuz/vmlinuz64 in $CD"
-        ( $ROOTFS_FOUND ) || MISSING="$MISSING""$(echo '')""missing core.gz/corepure64.gz in $CD"
+        ( $KERNEL_FOUND ) || MISSING=$(printf '\nmissing vmlinuz/vmlinuz64 in %s\n' "$CD")
+        ( $ROOTFS_FOUND ) || MISSING=$(printf '%s\nmissing core.gz/corepure64.gz in %s\n' "$MISSING" "$CD")
         ( $KERNEL_FOUND ) && ( $ROOTFS_FOUND ) && VALIDCDS="$VALIDCDS $CD"
       else
         count=`expr $count + 1`
@@ -468,19 +466,19 @@ getROOTFS(){
     if [ -z "$VALIDCDS" ]; then
       echo "Could not find a valid CD."
       if [ -n "$MISSING" ]; then
-        echo "Could not find system file(s): "$MISSING""
+        echo "Could not find system file(s): ${MISSING}"
       fi
       abort
     else
       if [ `echo $VALIDCDS | grep -o sr[[:digit:]] | wc -l` -gt 1 ]; then
         echo Please select your source:$VALIDCDS
         read CD
-        $(echo $CD | grep -q "^sr[[:digit:]]$") || { echo Invalid source, terminating...;abort; }
+        echo "$CD" | grep -q "^sr[[:digit:]]$" || ! echo Invalid source, terminating... || abort
       else
         CD=`trim $VALIDCDS`
       fi
     fi
-    BOOT=/mnt/"$CD"/boot
+    BOOT="/mnt/${CD}/boot"
     [ -r "$BOOT"/vmlinuz ] && use32
     [ -r "$BOOT"/vmlinuz64 ] && use64
     [ -r "$BOOT"/vmlinuz ] && [ -r "$BOOT"/vmlinuz64 ] && {
@@ -727,19 +725,15 @@ net_setup(){
   BOOT="/tmp/net_source"
   if [ "$INTERACTIVE" ]; then
     echo -n "Enter architecture (32)bit, (64)bit or (q)uit: "
-    read ARCH
-    if [ "$ARCH" = "32" ]; then
-      use32
-    else
-      if [ "$ARCH" = "64" ]; then
-        use64
-      else
-        echo "Invalid Arch type."
-        abort
-      fi
-    fi
+    read -r ARCH
+    case "$ARCH" in
+    32 ) use32 ;;
+    64 ) use64 ;;
+    q ) abort ;;
+    * ) echo "Invalid Arch type."; abort ;;
+    esac
   fi
-  echo Downloading "$ROOTFS".gz
+  echo Downloading "${ROOTFS}.gz"
   wget -t 3 -c $(cat /opt/tcemirror)${LATEST%%.*}.x/$BUILD/release/distribution_files/"$ROOTFS".gz
   wget -t 3 -c -q $(cat /opt/tcemirror)${LATEST%%.*}.x/$BUILD/release/distribution_files/"$ROOTFS".gz.md5.txt
   [ -n "$(cat "$ROOTFS".gz.md5.txt)" ] && [ "$(md5sum "$ROOTFS".gz)" = "$(cat "$ROOTFS".gz.md5.txt)" ] || {
